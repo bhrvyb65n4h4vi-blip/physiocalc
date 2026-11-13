@@ -1,0 +1,656 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>PhysioCalc Pro - Physics Formulas & Calculator</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
+        body { font-family: 'Plus Jakarta Sans', sans-serif; touch-action: manipulation; }
+    </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col selection:bg-cyan-500 selection:text-white">
+
+    <!-- Header -->
+    <header class="sticky top-0 z-50 bg-slate-900/90 backdrop-blur-md border-b border-slate-800 px-3 py-2.5 flex flex-wrap items-center justify-between gap-2">
+        <div class="flex items-center space-x-2.5">
+            <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-cyan-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-cyan-500/30 shrink-0">
+                <i class="fa-solid fa-atom text-white text-base"></i>
+            </div>
+            <div>
+                <h1 class="font-bold text-sm tracking-tight leading-tight" id="appTitle">PhysioCalc Pro</h1>
+                <p class="text-[10px] text-slate-400 leading-tight" id="appSubtitle">Усі формули та калькулятор</p>
+            </div>
+        </div>
+        <div class="flex items-center space-x-1.5 ml-auto">
+            <!-- Кнопка окремого калькулятора -->
+            <button onclick="openStandaloneCalc()" class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-cyan-400 px-2.5 py-1.5 rounded-xl text-[11px] font-bold transition flex items-center space-x-1 cursor-pointer">
+                <i class="fa-solid fa-calculator"></i> <span id="calcBtnLabel">Калькулятор</span>
+            </button>
+            <!-- Кнопка додавання власної формули -->
+            <button onclick="openAddModal()" class="bg-cyan-600 hover:bg-cyan-500 text-slate-950 px-2.5 py-1.5 rounded-xl text-[11px] font-bold transition flex items-center space-x-1 cursor-pointer">
+                <i class="fa-solid fa-plus"></i> <span id="addBtnText">Додати</span>
+            </button>
+            <select id="langSelect" onchange="changeLanguage(this.value)" class="bg-slate-800 border border-slate-700 text-[11px] rounded-xl px-2 py-1.5 text-slate-200 focus:outline-none focus:border-cyan-500 cursor-pointer">
+                <option value="en">EN</option>
+                <option value="uk" selected>UA</option>
+                <option value="pl">PL</option>
+                <option value="de">DE</option>
+                <option value="es">ES</option>
+                <option value="fr">FR</option>
+                <option value="it">IT</option>
+                <option value="tr">TR</option>
+                <option value="ro">RO</option>
+                <option value="pt">PT</option>
+            </select>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <main class="max-w-2xl w-full mx-auto p-3 sm:p-4 flex-1 space-y-3">
+
+        <!-- Smart Search Box -->
+        <div class="bg-slate-900/80 border border-slate-800 rounded-2xl p-3.5 shadow-xl space-y-2.5">
+            <h2 class="font-semibold text-xs text-cyan-400 flex items-center space-x-2">
+                <i class="fa-solid fa-wand-magic-sparkles"></i>
+                <span id="searchHeader">Розумний пошук формули</span>
+            </h2>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                <div>
+                    <label class="text-[10px] text-slate-400 block mb-1" id="labelGiven">Що дано (напр: v, t, m):</label>
+                    <input type="text" id="inputGiven" oninput="renderFormulas()" placeholder="v, t..." class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-cyan-500">
+                </div>
+                <div>
+                    <label class="text-[10px] text-slate-400 block mb-1" id="labelFind">Що треба знайти (напр: s, F, A):</label>
+                    <input type="text" id="inputFind" oninput="renderFormulas()" placeholder="s..." class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-cyan-500">
+                </div>
+            </div>
+        </div>
+
+        <!-- Перемикач: Всі формули / Мої формули -->
+        <div class="flex space-x-2">
+            <button onclick="setTab('all')" id="tabAll" class="px-3.5 py-1.5 rounded-xl bg-cyan-600 text-white text-xs font-semibold whitespace-nowrap cursor-pointer transition">Усі формули</button>
+            <button onclick="setTab('custom')" id="tabCustom" class="px-3.5 py-1.5 rounded-xl bg-slate-900 border border-slate-800 text-amber-400 text-xs font-semibold whitespace-nowrap cursor-pointer hover:border-slate-700 transition">✨ Мої формули</button>
+        </div>
+
+        <!-- Formula List -->
+        <div id="formulasList" class="space-y-2.5"></div>
+
+    </main>
+
+    <!-- Modal for Formula Calculator -->
+    <div id="calcModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-slate-900 border border-slate-800 rounded-3xl max-w-md w-full p-5 shadow-2xl relative space-y-3.5">
+            <div class="flex items-center justify-between pb-2.5 border-b border-slate-800">
+                <h3 id="modalFormulaTitle" class="font-bold text-sm text-cyan-400">Формула</h3>
+                <button onclick="closeCalc()" class="w-7 h-7 rounded-full bg-slate-800 flex items-center justify-center text-slate-400 hover:text-white transition cursor-pointer">
+                    <i class="fa-solid fa-xmark text-xs"></i>
+                </button>
+            </div>
+            <div id="modalFormulaEquation" class="text-lg font-mono text-center font-bold text-white bg-slate-950 py-2.5 rounded-2xl border border-slate-800"></div>
+            <div id="modalInputs" class="space-y-2.5 max-h-[45vh] overflow-y-auto pr-1"></div>
+            <div class="pt-1">
+                <button onclick="calculateResult()" class="w-full bg-cyan-600 hover:bg-cyan-500 text-slate-950 font-bold py-2.5 rounded-xl text-xs transition cursor-pointer" id="calcBtnText">Обчислити</button>
+            </div>
+            <div id="modalResult" class="text-center font-bold text-cyan-300 text-base py-1"></div>
+        </div>
+    </div>
+
+    <!-- Modal for Standalone Calculator -->
+    <div id="standaloneCalcModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-slate-900 border border-slate-800 rounded-3xl max-w-xs w-full p-5 shadow-2xl relative space-y-3.5">
+            <div class="flex items-center justify-between pb-2.5 border-b border-slate-800">
+                <h3 class="font-bold text-sm text-cyan-400" id="standCalcTitle">Калькулятор</h3>
+                <button onclick="closeStandaloneCalc()" class="w-7 h-7 rounded-full bg-slate-800 flex items-center justify-center text-slate-400 hover:text-white transition cursor-pointer">
+                    <i class="fa-solid fa-xmark text-xs"></i>
+                </button>
+            </div>
+            <input type="text" id="calcScreen" readonly class="w-full bg-slate-950 border border-slate-800 rounded-2xl px-3 py-2.5 text-right font-mono text-lg text-white focus:outline-none">
+            <div class="grid grid-cols-4 gap-2">
+                <button onclick="calcClear()" class="bg-rose-500/20 text-rose-400 py-2.5 rounded-xl font-bold text-xs hover:bg-rose-500/35 transition">C</button>
+                <button onclick="calcAppend('(')" class="bg-slate-800 text-slate-300 py-2.5 rounded-xl font-bold text-xs">(</button>
+                <button onclick="calcAppend(')')" class="bg-slate-800 text-slate-300 py-2.5 rounded-xl font-bold text-xs">)</button>
+                <button onclick="calcAppend('/')" class="bg-cyan-500/20 text-cyan-400 py-2.5 rounded-xl font-bold text-xs">÷</button>
+
+                <button onclick="calcAppend('7')" class="bg-slate-800 text-white py-2.5 rounded-xl font-bold text-xs">7</button>
+                <button onclick="calcAppend('8')" class="bg-slate-800 text-white py-2.5 rounded-xl font-bold text-xs">8</button>
+                <button onclick="calcAppend('9')" class="bg-slate-800 text-white py-2.5 rounded-xl font-bold text-xs">9</button>
+                <button onclick="calcAppend('*')" class="bg-cyan-500/20 text-cyan-400 py-2.5 rounded-xl font-bold text-xs">×</button>
+
+                <button onclick="calcAppend('4')" class="bg-slate-800 text-white py-2.5 rounded-xl font-bold text-xs">4</button>
+                <button onclick="calcAppend('5')" class="bg-slate-800 text-white py-2.5 rounded-xl font-bold text-xs">5</button>
+                <button onclick="calcAppend('6')" class="bg-slate-800 text-white py-2.5 rounded-xl font-bold text-xs">6</button>
+                <button onclick="calcAppend('-')" class="bg-cyan-500/20 text-cyan-400 py-2.5 rounded-xl font-bold text-xs">-</button>
+
+                <button onclick="calcAppend('1')" class="bg-slate-800 text-white py-2.5 rounded-xl font-bold text-xs">1</button>
+                <button onclick="calcAppend('2')" class="bg-slate-800 text-white py-2.5 rounded-xl font-bold text-xs">2</button>
+                <button onclick="calcAppend('3')" class="bg-slate-800 text-white py-2.5 rounded-xl font-bold text-xs">3</button>
+                <button onclick="calcAppend('+')" class="bg-cyan-500/20 text-cyan-400 py-2.5 rounded-xl font-bold text-xs">+</button>
+
+                <button onclick="calcAppend('0')" class="col-span-2 bg-slate-800 text-white py-2.5 rounded-xl font-bold text-xs">0</button>
+                <button onclick="calcAppend('.')" class="bg-slate-800 text-white py-2.5 rounded-xl font-bold text-xs">.</button>
+                <button onclick="calcEvaluate()" class="bg-cyan-600 text-slate-950 py-2.5 rounded-xl font-bold text-xs">=</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal for Adding Custom Formula -->
+    <div id="addModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-slate-900 border border-slate-800 rounded-3xl max-w-md w-full p-5 shadow-2xl relative space-y-3 max-h-[90vh] overflow-y-auto">
+            <div class="flex items-center justify-between pb-2.5 border-b border-slate-800">
+                <h3 class="font-bold text-sm text-amber-400" id="addModalTitle">Додати власну формулу</h3>
+                <button onclick="closeAddModal()" class="w-7 h-7 rounded-full bg-slate-800 flex items-center justify-center text-slate-400 hover:text-white transition cursor-pointer">
+                    <i class="fa-solid fa-xmark text-xs"></i>
+                </button>
+            </div>
+            <div class="space-y-2.5">
+                <div>
+                    <label class="text-[11px] text-slate-400 block mb-1" id="labelName">Назва формули:</label>
+                    <input type="text" id="newTitle" placeholder="Наприклад: Імпульс тіла" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-500">
+                </div>
+                <div>
+                    <label class="text-[11px] text-slate-400 block mb-1" id="labelFormula">Математичний вираз (формула):</label>
+                    <input type="text" id="newFormula" placeholder="p = m * v" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs font-mono text-amber-400 focus:outline-none focus:border-amber-500">
+                </div>
+                <div>
+                    <label class="text-[11px] text-slate-400 block mb-1" id="labelNewFind">Що шукаємо (основна літера):</label>
+                    <input type="text" id="newFind" placeholder="p" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-500">
+                </div>
+                <div>
+                    <label class="text-[11px] text-slate-400 block mb-1" id="labelNewGiven">Що дано (через кому):</label>
+                    <input type="text" id="newGiven" placeholder="m, v" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-500">
+                </div>
+                <div>
+                    <label class="text-[11px] text-slate-400 block mb-1" id="labelJsCalc">JavaScript формула розрахунку (напр: d.m * d.v):</label>
+                    <input type="text" id="newCalc" placeholder="d.m * d.v" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs font-mono text-cyan-400 focus:outline-none focus:border-amber-500">
+                </div>
+            </div>
+            <div class="pt-1">
+                <button onclick="saveCustomFormula()" class="w-full bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold py-2.5 rounded-xl text-xs transition cursor-pointer" id="saveBtnText">Зберегти формулу</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="py-3 text-center text-[11px] text-slate-500 border-t border-slate-900" id="footerText">
+        PhysioCalc Pro &bull; Universal Edition
+    </footer>
+
+    <!-- JavaScript Logic -->
+    <script>
+        const i18n = {
+            en: {
+                title: "PhysioCalc Pro", subtitle: "All Physics Formulas & Calculator",
+                searchHeader: "Smart Formula Search", labelGiven: "Given (e.g. v, t):", labelFind: "Find (e.g. s):",
+                all: "All Formulas", custom: "My Formulas", calcBtn: "Calculate", result: "Result: ",
+                addBtn: "Add", calcLabel: "Calculator", standCalcTitle: "Calculator",
+                addModalTitle: "Add Custom Formula", labelName: "Formula Name:", labelFormula: "Mathematical Expression:",
+                labelNewFind: "What to find (main letter):", labelNewGiven: "Given variables (comma separated):",
+                labelJsCalc: "JS Calculation formula (e.g. d.m * d.v):", saveBtnText: "Save Formula",
+                badgePhysics: "Physics", badgeCustom: "✨ Custom Formula", findLabelText: "Find:", givenLabelText: "Given:",
+                notFound: "No formulas found", fillAll: "Please fill in all fields!", calcError: "Calculation error",
+                footerText: "PhysioCalc Pro • Universal Edition"
+            },
+            uk: {
+                title: "PhysioCalc Pro", subtitle: "Усі формули з фізики та калькулятор",
+                searchHeader: "Розумний пошук формули", labelGiven: "Дано (напр: v, t):", labelFind: "Треба знайти (напр: s):",
+                all: "Усі формули", custom: "Мої формули", calcBtn: "Обчислити", result: "Результат: ",
+                addBtn: "Додати", calcLabel: "Калькулятор", standCalcTitle: "Калькулятор",
+                addModalTitle: "Додати власну формулу", labelName: "Назва формули:", labelFormula: "Математичний вираз (формула):",
+                labelNewFind: "Що шукаємо (основна літера):", labelNewGiven: "Що дано (через кому):",
+                labelJsCalc: "JavaScript формула розрахунку (напр: d.m * d.v):", saveBtnText: "Зберегти формулу",
+                badgePhysics: "Фізика", badgeCustom: "✨ Моя формула", findLabelText: "Шукаємо:", givenLabelText: "Дано:",
+                notFound: "Формул не знайдено", fillAll: "Заповніть усі поля!", calcError: "Помилка обчислення",
+                footerText: "PhysioCalc Pro • Універсальне видання"
+            },
+            pl: {
+                title: "PhysioCalc Pro", subtitle: "Wszystkie wzory fizyczne i kalkulator",
+                searchHeader: "Inteligentne wyszukiwanie wzorów", labelGiven: "Dane (np. v, t):", labelFind: "Szukane (np. s):",
+                all: "Wszystkie wzory", custom: "Moje wzory", calcBtn: "Oblicz", result: "Wynik: ",
+                addBtn: "Dodaj", calcLabel: "Kalkulator", standCalcTitle: "Kalkulator",
+                addModalTitle: "Dodaj własny wzór", labelName: "Nazwa wzoru:", labelFormula: "Wyrażenie matematyczne:",
+                labelNewFind: "Szukana wielkość (główna litera):", labelNewGiven: "Dane (oddzielone przecinkami):",
+                labelJsCalc: "Formuła obliczeniowa JS (np. d.m * d.v):", saveBtnText: "Zapisz wzór",
+                badgePhysics: "Fizyka", badgeCustom: "✨ Mój wzór", findLabelText: "Szukamy:", givenLabelText: "Dane:",
+                notFound: "Nie znaleziono wzorów", fillAll: "Wypełnij wszystkie pola!", calcError: "Błąd obliczeń",
+                footerText: "PhysioCalc Pro • Edycja Uniwersalna"
+            },
+            de: {
+                title: "PhysioCalc Pro", subtitle: "Alle Physikformeln & Rechner",
+                searchHeader: "Intelligente Formelsuche", labelGiven: "Gegeben (z.B. v, t):", labelFind: "Gesucht (z.B. s):",
+                all: "Alle Formeln", custom: "Eigene Formeln", calcBtn: "Berechnen", result: "Ergebnis: ",
+                addBtn: "Hinzufügen", calcLabel: "Rechner", standCalcTitle: "Rechner",
+                addModalTitle: "Eigene Formel hinzufügen", labelName: "Formelname:", labelFormula: "Mathematischer Ausdruck:",
+                labelNewFind: "Gesuchte Variable (Hauptbuchstabe):", labelNewGiven: "Gegebene Variablen (durch Komma getrennt):",
+                labelJsCalc: "JS-Berechnungsformel (z.B. d.m * d.v):", saveBtnText: "Formel speichern",
+                badgePhysics: "Physik", badgeCustom: "✨ Eigene Formel", findLabelText: "Gesucht:", givenLabelText: "Gegeben:",
+                notFound: "Keine Formeln gefunden", fillAll: "Bitte alle Felder ausfüllen!", calcError: "Berechnungsfehler",
+                footerText: "PhysioCalc Pro • Universelle Edition"
+            },
+            es: {
+                title: "PhysioCalc Pro", subtitle: "Todas las fórmulas de física y calculadora",
+                searchHeader: "Búsqueda inteligente de fórmulas", labelGiven: "Datos (ej. v, t):", labelFind: "Hallar (ej. s):",
+                all: "Todas", custom: "Mis fórmulas", calcBtn: "Calcular", result: "Resultado: ",
+                addBtn: "Añadir", calcLabel: "Calculadora", standCalcTitle: "Calculadora",
+                addModalTitle: "Añadir fórmula personalizada", labelName: "Nombre de la fórmula:", labelFormula: "Expresión matemática:",
+                labelNewFind: "Qué buscar (letra principal):", labelNewGiven: "Datos dados (separados por comas):",
+                labelJsCalc: "Fórmula de cálculo JS (ej: d.m * d.v):", saveBtnText: "Guardar fórmula",
+                badgePhysics: "Física", badgeCustom: "✨ Mi fórmula", findLabelText: "Hallar:", givenLabelText: "Datos:",
+                notFound: "No se encontraron fórmulas", fillAll: "¡Por favor llena todos los campos!", calcError: "Error de cálculo",
+                footerText: "PhysioCalc Pro • Edición Universal"
+            },
+            fr: {
+                title: "PhysioCalc Pro", subtitle: "Toutes les formules et calculatrice",
+                searchHeader: "Recherche intelligente de formules", labelGiven: "Données (ex: v, t):", labelFind: "Recherché (ex: s):",
+                all: "Toutes les formules", custom: "Mes formules", calcBtn: "Calculer", result: "Résultat : ",
+                addBtn: "Ajouter", calcLabel: "Calculatrice", standCalcTitle: "Calculatrice",
+                addModalTitle: "Ajouter une formule personnalisée", labelName: "Nom de la formule :", labelFormula: "Expression mathématique :",
+                labelNewFind: "Recherché (lettre principale) :", labelNewGiven: "Données (séparées par des virgules) :",
+                labelJsCalc: "Formule de calcul JS (ex: d.m * d.v) :", saveBtnText: "Enregistrer la formule",
+                badgePhysics: "Physique", badgeCustom: "✨ Ma formule", findLabelText: "Recherché :", givenLabelText: "Données :",
+                notFound: "Aucune formule trouvée", fillAll: "Veuillez remplir tous les champs !", calcError: "Erreur de calcul",
+                footerText: "PhysioCalc Pro • Édition Universelle"
+            },
+            it: {
+                title: "PhysioCalc Pro", subtitle: "Tutte le formule di fisica e calcolatrice",
+                searchHeader: "Ricerca intelligente delle formule", labelGiven: "Dati (es. v, t):", labelFind: "Trovare (es. s):",
+                all: "Tutte le formule", custom: "Le mie formule", calcBtn: "Calcola", result: "Risultato: ",
+                addBtn: "Aggiungi", calcLabel: "Calcolatrice", standCalcTitle: "Calcolatrice",
+                addModalTitle: "Aggiungi formula personalizzata", labelName: "Nome della formula:", labelFormula: "Espressione matematica:",
+                labelNewFind: "Cosa cercare (lettera principale):", labelNewGiven: "Dati dati (separati da virgola):",
+                labelJsCalc: "Formula di calcolo JS (es. d.m * d.v):", saveBtnText: "Salva formula",
+                badgePhysics: "Fisica", badgeCustom: "✨ Mia formula", findLabelText: "Trovare:", givenLabelText: "Dati:",
+                notFound: "Nessuna formula trovata", fillAll: "Compila tutti i campi!", calcError: "Errore di calcolo",
+                footerText: "PhysioCalc Pro • Edizione Universale"
+            },
+            tr: {
+                title: "PhysioCalc Pro", subtitle: "Tüm Fizik Formülleri ve Hesap Makinesi",
+                searchHeader: "Akıllı Formül Arama", labelGiven: "Verilenler (örn: v, t):", labelFind: "İstenen (örn: s):",
+                all: "Tüm Formüller", custom: "Özel Formüllerim", calcBtn: "Hesapla", result: "Sonuç: ",
+                addBtn: "Ekle", calcLabel: "Hesap Makinesi", standCalcTitle: "Hesap Makinesi",
+                addModalTitle: "Özel Formül Ekle", labelName: "Formül Adı:", labelFormula: "Matematiksel İfade:",
+                labelNewFind: "Aranan (ana harf):", labelNewGiven: "Verilenler (virgülle ayrılmış):",
+                labelJsCalc: "JS Hesaplama Formülü (örn: d.m * d.v):", saveBtnText: "Formülü Kaydet",
+                badgePhysics: "Fizik", badgeCustom: "✨ Özel Formül", findLabelText: "Aranan:", givenLabelText: "Verilen:",
+                notFound: "Formül bulunamadı", fillAll: "Lütfen tüm alanları doldurun!", calcError: "Hesaplama hatası",
+                footerText: "PhysioCalc Pro • Evrensel Sürüm"
+            },
+            ro: {
+                title: "PhysioCalc Pro", subtitle: "Toate formulele de fizică și calculator",
+                searchHeader: "Căutare inteligentă formule", labelGiven: "Se dă (ex: v, t):", labelFind: "Se cere (ex: s):",
+                all: "Toate formulele", custom: "Formule mele", calcBtn: "Calculează", result: "Rezultat: ",
+                addBtn: "Adaugă", calcLabel: "Calculator", standCalcTitle: "Calculator",
+                addModalTitle: "Adaugă formulă personalizată", labelName: "Numele formulei:", labelFormula: "Expresia matematică:",
+                labelNewFind: "Se cere (litera principală):", labelNewGiven: "Se dă (separate prin virgulă):",
+                labelJsCalc: "Formulă de calcul JS (ex: d.m * d.v):", saveBtnText: "Salvează formula",
+                badgePhysics: "Fizică", badgeCustom: "✨ Formula mea", findLabelText: "Se cere:", givenLabelText: "Se dă:",
+                notFound: "Nu s-au găsit formule", fillAll: "Completați toate câmpurile!", calcError: "Eroare de calcul",
+                footerText: "PhysioCalc Pro • Ediție Universală"
+            },
+            pt: {
+                title: "PhysioCalc Pro", subtitle: "Todas as fórmulas de física e calculadora",
+                searchHeader: "Busca inteligente de fórmulas", labelGiven: "Dados (ex: v, t):", labelFind: "Procurado (ex: s):",
+                all: "Todas as fórmulas", custom: "Minhas fórmulas", calcBtn: "Calcular", result: "Resultado: ",
+                addBtn: "Adicionar", calcLabel: "Calculadora", standCalcTitle: "Calculadora",
+                addModalTitle: "Adicionar fórmula personalizada", labelName: "Nome da fórmula:", labelFormula: "Expressão matemática:",
+                labelNewFind: "O que procurar (letra principal):", labelNewGiven: "Dados (separados por vírgula):",
+                labelJsCalc: "Fórmula de cálculo JS (ex: d.m * d.v):", saveBtnText: "Salvar fórmula",
+                badgePhysics: "Física", badgeCustom: "✨ Minha fórmula", findLabelText: "Procurado:", givenLabelText: "Dados:",
+                notFound: "Nenhuma fórmula encontrada", fillAll: "Por favor, preencha todos os campos!", calcError: "Erro de cálculo",
+                footerText: "PhysioCalc Pro • Edição Universal"
+            }
+        };
+
+        const formulaNamesByLang = {
+            en: {
+                1: "Uniform Motion Speed", 2: "Density", 3: "Body Momentum", 4: "Solid Pressure", 5: "Gravity Force",
+                6: "Elastic Force (Hooke's Law)", 7: "Sliding Friction Force", 8: "Body Weight", 9: "Archimedes' Force",
+                10: "Mechanical Work", 11: "Power", 12: "Potential Energy", 13: "Kinetic Energy",
+                14: "Heat (Heating)", 15: "Heat (Melting)", 16: "Heat (Vaporization)", 17: "Heat (Combustion)",
+                18: "Efficiency (COP)", 19: "Current", 20: "Voltage", 21: "Conductor Resistance", 22: "Ohm's Law",
+                23: "Coulomb's Law", 24: "Electric Current Work", 25: "Electric Power", 26: "Joule-Lenz Law", 27: "Ampere Force"
+            },
+            uk: {
+                1: "Швидкість рівномірного руху", 2: "Густина", 3: "Імпульс тіла", 4: "Тиск твердих тіл", 5: "Сила тяжіння",
+                6: "Сила пружності (Закон Гука)", 7: "Сила тертя ковзання", 8: "Вага тіла", 9: "Архімедова сила",
+                10: "Механічна робота", 11: "Потужність", 12: "Потенціальна енергія", 13: "Кінетична енергія",
+                14: "Кількість теплоти при нагріванні", 15: "Кількість теплоти плавлення", 16: "Кількість теплоти пароутворення", 17: "Теплота згоряння палива",
+                18: "Коефіцієнт корисної дії (ККД)", 19: "Сила струму", 20: "Напруга", 21: "Опір провідника", 22: "Закон Ома",
+                23: "Закон Кулона", 24: "Робота електричного струму", 25: "Електрична потужність", 26: "Закон Джоуля-Ленца", 27: "Сила Ампера"
+            },
+            pl: {
+                1: "Prędkość w ruchu jednostajnym", 2: "Gęstość", 3: "Pęd ciała", 4: "Ciśnienie ciał stałych", 5: "Siła ciężkości",
+                6: "Siła sprężystości (Prawo Hooke'a)", 7: "Siła tarcia ślizgowego", 8: "Ciężar ciała", 9: "Siła wyporu (Archimedesa)",
+                10: "Praca mechaniczna", 11: "Moc", 12: "Energia potencjalna", 13: "Energia kinetyczna",
+                14: "Ciepło właściwe (ogrzewanie)", 15: "Ciepło topnienia", 16: "Ciepło parowania", 17: "Ciepło spalania paliwa",
+                18: "Sprawność (COP)", 19: "Natężenie prądu", 20: "Napięcie elektryczne", 21: "Opór elektryczny przewodnika", 22: "Prawo Ohma",
+                23: "Prawo Coulomba", 24: "Praca prądu elektrycznego", 25: "Moc elektryczna", 26: "Prawo Joule'a-Lenza", 27: "Siła Ampère'a"
+            },
+            de: {
+                1: "Geschwindigkeit bei gleichförmiger Bewegung", 2: "Dichte", 3: "Impuls eines Körpers", 4: "Druck fester Körper", 5: "Gewichtskraft",
+                6: "Federkraft (Hookesches Gesetz)", 7: "Gleitreibungskraft", 8: "Gewicht eines Körpers", 9: "Auftriebskraft (Archimedes)",
+                10: "Mechanische Arbeit", 11: "Leistung", 12: "Potenzielle Energie", 13: "Kinetische Energie",
+                14: "Wärmemenge (Erwärmung)", 15: "Wärmemenge (Schmelzen)", 16: "Wärmemenge (Verdampfen)", 17: "Verbrennungswärme",
+                18: "Wirkungsgrad", 19: "Elektrische Stromstärke", 20: "Elektrische Spannung", 21: "Widerstand eines Leiters", 22: "ohmsches Gesetz",
+                23: "Coulombsches Gesetz", 24: "Arbeit des elektrischen Stroms", 25: "Elektrische Leistung", 26: "Joule-Lenz-Gesetz", 27: "Ampèresche Kraft"
+            },
+            es: {
+                1: "Velocidad en movimiento uniforme", 2: "Densidad", 3: "Momento lineal (Impulso)", 4: "Presión en sólidos", 5: "Fuerza de gravedad",
+                6: "Fuerza elástica (Ley de Hooke)", 7: "Fuerza de fricción por deslizamiento", 8: "Peso del cuerpo", 9: "Fuerza de Arquímedes",
+                10: "Trabajo mecánico", 11: "Potencia", 12: "Energía potencial", 13: "Energía cinética",
+                14: "Calor (Calentamiento)", 15: "Calor de fusión", 16: "Calor de vaporización", 17: "Calor de combustión",
+                18: "Eficiencia (Rendimiento)", 19: "Intensidad de corriente", 20: "Voltaje", 21: "Resistencia del conductor", 22: "Ley de Ohm",
+                23: "Ley de Coulomb", 24: "Trabajo de corriente eléctrica", 25: "Potencia eléctrica", 26: "Ley de Joule", 27: "Fuerza de Ampère"
+            },
+            fr: {
+                1: "Vitesse en mouvement uniforme", 2: "Masse volumique (Densité)", 3: "Quantité de mouvement", 4: "Pression dans les solides", 5: "Force de pesanteur",
+                6: "Force élastique (Loi de Hooke)", 7: "Force de frottement de glissement", 8: "Poids du corps", 9: "Poussée d'Archimède",
+                10: "Travail mécanique", 11: "Puissance", 12: "Énergie potentielle", 13: "Énergie cinétique",
+                14: "Chaleur (Chauffage)", 15: "Chaleur de fusion", 16: "Chaleur de vaporisation", 17: "Chaleur de combustion",
+                18: "Rendement", 19: "Intensité du courant", 20: "Tension électrique", 21: "Résistance d'un conducteur", 22: "Loi d'Ohm",
+                23: "Loi de Coulomb", 24: "Travail du courant électrique", 25: "Puissance électrique", 26: "Loi de Joule", 27: "Force d'Ampère"
+            },
+            it: {
+                1: "Velocità in moto uniforme", 2: "Densità", 3: "Quantità di moto", 4: "Pressione nei solidi", 5: "Forza di gravità",
+                6: "Forza elastica (Legge di Hooke)", 7: "Forza d'attrito radente", 8: "Peso del corpo", 9: "Forza di Archimede",
+                10: "Lavoro meccanico", 11: "Potenza", 12: "Energia potenziale", 13: "Energia cinetica",
+                14: "Calore (Riscaldamento)", 15: "Calore di fusione", 16: "Calore di vaporizzazione", 17: "Calore di combustione",
+                18: "Rendimento", 19: "Intensità di corrente", 20: "Tensione elettrica", 21: "Resistenza del conduttore", 22: "Legge di Ohm",
+                23: "Legge di Coulomb", 24: "Lavoro della corrente elettrica", 25: "Potenza elettrica", 26: "Legge di Joule", 27: "Forza di Ampère"
+            },
+            tr: {
+                1: "Düzgün Hareket Hızı", 2: "Özkütle (Yoğunluk)", 3: "Çizgisel Momentum", 4: "Katı Basıncı", 5: "Yerçekimi Kuvveti",
+                6: "Esneklik Kuvveti (Hooke Kanunu)", 7: "Kinetik Sürtünme Kuvveti", 8: "Ağırlık", 9: "Kaldırma Kuvveti (Arşimet)",
+                10: "Mekanik İş", 11: "Güç", 12: "Potansiyel Enerji", 13: "Kinetik Enerji",
+                14: "Isı (Isınma)", 15: "Ergime Isısı", 16: "Buharlaşma Isısı", 17: "Yakıt Yanma Isısı",
+                18: "Verim", 19: "Elektrik Akımı", 20: "Gerilim (Potansiyel Fark)", 21: "İletken Direnci", 22: "Ohm Kanunu",
+                23: "Coulomb Kanunu", 24: "Elektrik Akımının İşi", 25: "Elektriksel Güç", 26: "Joule Kanunu", 27: "Amper Kuvveti"
+            },
+            ro: {
+                1: "Viteza în mișcare uniformă", 2: "Densitate", 3: "Impulsul corpului", 4: "Presiunea în solide", 5: "Forța de greutate",
+                6: "Forța elastică (Legea lui Hooke)", 7: "Forța de frecare la alunecare", 8: "Greutatea corpului", 9: "Forța lui Arhimede",
+                10: "Lucrul mecanic", 11: "Puterea", 12: "Energie potențială", 13: "Energie cinetică",
+                14: "Căldură (Încălzire)", 15: "Căldură latentă de topire", 16: "Căldură latentă de vaporizare", 17: "Căldură de ardere",
+                18: "Randament", 19: "Intensitatea curentului", 20: "Tensiunea electrică", 21: "Rezistența conductorului", 22: "Legea lui Ohm",
+                23: "Legea lui Coulomb", 24: "Lucrul curentului electric", 25: "Puterea electrică", 26: "Legea Joule-Lenz", 27: "Forța Ampère"
+            },
+            pt: {
+                1: "Velocidade em movimento uniforme", 2: "Densidade", 3: "Quantidade de movimento (Momento)", 4: "Pressão em sólidos", 5: "Força peso",
+                6: "Força elástica (Lei de Hooke)", 7: "Força de atrito de deslizamento", 8: "Peso do corpo", 9: "Empuxo (Força de Arquimedes)",
+                10: "Trabalho mecânico", 11: "Potência", 12: "Energia potencial", 13: "Energia cinética",
+                14: "Calor (Aquecimento)", 15: "Calor de fusão", 16: "Calor de vaporização", 17: "Calor de combustão",
+                18: "Rendimiento (Eficiência)", 19: "Corrente elétrica", 20: "Tensão elétrica", 21: "Resistência do condutor", 22: "Lei de Ohm",
+                23: "Lei de Coulomb", 24: "Trabalho da corrente elétrica", 25: "Potência elétrica", 26: "Lei de Joule", 27: "Força de Ampère"
+            }
+        };
+
+        const symbolsMap = {
+            en: { l: "Path (l)", t: "Time (t)", m: "Mass (m)", V: "Volume (V)", p: "Momentum/Pressure", F: "Force (F)", S: "Area (S)", k: "Stiffness (k)", x: "Extension (x)", mu: "Friction coeff. (μ)", N: "Normal force (N)", rho: "Density (ρ)", V_зан: "Submerged volume (V)", A: "Work (A)", N_pow: "Power (N)", E_p: "Potential energy (Ep)", E_k: "Kinetic energy (Ek)", c: "Specific heat (c)", delta_t: "Temperature change (Δt)", lambda: "Melting heat (λ)", r: "Vaporization heat (r)", q: "Combustion heat / Charge (q)", Q_кор: "Useful heat", Q_повн: "Total heat", eta: "Efficiency (η)", I: "Current (I)", U: "Voltage (U)", rho_res: "Resistivity (ρ)", R: "Resistance (R)", k_c: "k (9*10^9)", q1: "Charge 1 (q1)", q2: "Charge 2 (q2)", r_dist: "Distance (r)", B: "Magnetic induction (B)", alpha: "Angle (α)", Q: "Heat (Q)" },
+            uk: { l: "Шлях (l)", t: "Час (t)", m: "Маса (m)", V: "Об'єм (V)", p: "Імпульс / Тиск", F: "Сила (F)", S: "Площа (S)", k: "Жорсткість (k)", x: "Видовження (x)", mu: "Коефіцієнт тертя (μ)", N: "Сила реакції опори (N)", rho: "Густина (ρ)", V_зан: "Об'єм зануреної частини (V)", A: "Робота (A)", N_pow: "Потужність (N)", E_p: "Потенціальна енергія (Ep)", E_k: "Кінетична енергія (Ek)", c: "Питома теплоємність (c)", delta_t: "Зміна температури (Δt)", lambda: "Питома теплота плавлення (λ)", r: "Питома теплота пароутворення (r)", q: "Питома теплота / Заряд (q)", Q_кор: "Корисна теплота", Q_повн: "Повна теплота", eta: "ККД (η)", I: "Сила струму (I)", U: "Напруга (U)", rho_res: "Питомий опір (ρ)", R: "Опір (R)", k_c: "k (9*10^9)", q1: "Заряд 1 (q1)", q2: "Заряд 2 (q2)", r_dist: "Відстань (r)", B: "Магнітна індукція (B)", alpha: "Кут (α)", Q: "Кількість теплоти (Q)" },
+            pl: { l: "Droga (l)", t: "Czas (t)", m: "Masa (m)", V: "Objętość (V)", p: "Pęd / Ciśnienie", F: "Siła (F)", S: "Powierzchnia (S)", k: "Sztywność (k)", x: "Wydłużenie (x)", mu: "Współczynnik tarcia (μ)", N: "Siła nacisku (N)", rho: "Gęstość (ρ)", V_зан: "Objętość zanurzona (V)", A: "Praca (A)", N_pow: "Moc (N)", E_p: "Energia potencjalna (Ep)", E_k: "Energia kinetyczna (Ek)", c: "Ciepło właściwe (c)", delta_t: "Zmiana temperatury (Δt)", lambda: "Ciepło topnienia (λ)", r: "Ciepło parowania (r)", q: "Ciepło spalania / ładunek (q)", Q_кор: "Ciepło użyteczne", Q_повн: "Ciepło całkowite", eta: "Sprawność (η)", I: "Natężenie prądu (I)", U: "Napięcie (U)", rho_res: "Oporność właściwa (ρ)", R: "Opór (R)", k_c: "k (9*10^9)", q1: "Ładunek 1 (q1)", q2: "Ładunek 2 (q2)", r_dist: "Odległość (r)", B: "Indukcja magnetyczna (B)", alpha: "Kąt (α)", Q: "Ciepło (Q)" },
+            de: { l: "Weg (l)", t: "Zeit (t)", m: "Masse (m)", V: "Volumen (V)", p: "Impuls / Druck", F: "Kraft (F)", S: "Fläche (S)", k: "Federkonstante (k)", x: "Auslenkung (x)", mu: "Reibungskoeffizient (μ)", N: "Normalkraft (N)", rho: "Dichte (ρ)", V_зан: "Eingetauchtes Volumen (V)", A: "Arbeit (A)", N_pow: "Leistung (N)", E_p: "Potenzielle Energie (Ep)", E_k: "Kinetische Energie (Ek)", c: "Spezifische Wärmekapazität (c)", delta_t: "Temperaturänderung (Δt)", lambda: "Schmelzwärme (λ)", r: "Verdampfungswärme (r)", q: "Heizwert / Ladung (q)", Q_кор: "Nutzwärme", Q_повн: "Gesamtwärme", eta: "Wirkungsgrad (η)", I: "Stromstärke (I)", U: "Spannung (U)", rho_res: "Spezifischer Widerstand (ρ)", R: "Widerstand (R)", k_c: "k (9*10^9)", q1: "Ladung 1 (q1)", q2: "Ladung 2 (q2)", r_dist: "Abstand (r)", B: "Magnetische Induktion (B)", alpha: "Winkel (α)", Q: "Wärmemenge (Q)" },
+            es: { l: "Distancia (l)", t: "Tiempo (t)", m: "Masa (m)", V: "Volumen (V)", p: "Momento / Presión", F: "Fuerza (F)", S: "Área (S)", k: "Constante elástica (k)", x: "Elongación (x)", mu: "Coef. fricción (μ)", N: "Fuerza normal (N)", rho: "Densidad (ρ)", V_зан: "Volumen sumergido (V)", A: "Trabajo (A)", N_pow: "Potencia (N)", E_p: "Energía potencial (Ep)", E_k: "Energía cinética (Ek)", c: "Calor específico (c)", delta_t: "Cambio de temperatura (Δt)", lambda: "Calor de fusión (λ)", r: "Calor de vaporización (r)", q: "Calor de combustión / Carga (q)", Q_кор: "Calor útil", Q_повн: "Calor total", eta: "Eficiencia (η)", I: "Corriente (I)", U: "Voltaje (U)", rho_res: "Resistividad (ρ)", R: "Resistencia (R)", k_c: "k (9*10^9)", q1: "Carga 1 (q1)", q2: "Carga 2 (q2)", r_dist: "Distancia (r)", B: "Inducción magnética (B)", alpha: "Ángulo (α)", Q: "Calor (Q)" },
+            fr: { l: "Chemin (l)", t: "Temps (t)", m: "Masse (m)", V: "Volume (V)", p: "Quantité / Pression", F: "Force (F)", S: "Surface (S)", k: "Raideur (k)", x: "Allongement (x)", mu: "Coeff. de frottement (μ)", N: "Force normale (N)", rho: "Masse volumique (ρ)", V_зан: "Volume immergé (V)", A: "Travail (A)", N_pow: "Puissance (N)", E_p: "Énergie potentielle (Ep)", E_k: "Énergie cinétique (Ek)", c: "Capacité thermique massique (c)", delta_t: "Variation de température (Δt)", lambda: "Chaleur de fusion (λ)", r: "Chaleur de vaporisation (r)", q: "Chaleur de combustion / Charge (q)", Q_кор: "Chaleur utile", Q_повн: "Chaleur totale", eta: "Rendement (η)", I: "Intensité (I)", U: "Tension (U)", rho_res: "Résistivité (ρ)", R: "Résistance (R)", k_c: "k (9*10^9)", q1: "Charge 1 (q1)", q2: "Charge 2 (q2)", r_dist: "Distance (r)", B: "Induction magnétique (B)", alpha: "Angle (α)", Q: "Chaleur (Q)" },
+            it: { l: "Percorso (l)", t: "Tempo (t)", m: "Massa (m)", V: "Volume (V)", p: "Quantità / Pressione", F: "Forza (F)", S: "Superficie (S)", k: "Costante elastica (k)", x: "Allungamento (x)", mu: "Coeff. d'attrito (μ)", N: "Forza normale (N)", rho: "Densità (ρ)", V_зан: "Volume immerso (V)", A: "Lavoro (A)", N_pow: "Potenza (N)", E_p: "Energia potenziale (Ep)", E_k: "Energia cinetica (Ek)", c: "Calore specifico (c)", delta_t: "Variazione di temperatura (Δt)", lambda: "Calore di fusione (λ)", r: "Calore di vaporizzazione (r)", q: "Calore di combustione / Carica (q)", Q_кор: "Calore utile", Q_повн: "Calore totale", eta: "Rendimento (η)", I: "Corrente (I)", U: "Tensione (U)", rho_res: "Resistività (ρ)", R: "Resistenza (R)", k_c: "k (9*10^9)", q1: "Carica 1 (q1)", q2: "Carica 2 (q2)", r_dist: "Distanza (r)", B: "Induzione magnetica (B)", alpha: "Angolo (α)", Q: "Calore (Q)" },
+            tr: { l: "Yol (l)", t: "Zaman (t)", m: "Kütle (m)", V: "Hacim (V)", p: "Momentum / Basınç", F: "Kuvvet (F)", S: "Yüzey Alanı (S)", k: "Yay Sabiti (k)", x: "Uzanma Miktarı (x)", mu: "Sürtünme katsayısı (μ)", N: "Tepki Kuvveti (N)", rho: "Özkütle (ρ)", V_зан: "Batan Hacim (V)", A: "İş (A)", N_pow: "Güç (N)", E_p: "Potansiyel Enerji (Ep)", E_k: "Kinetik Enerji (Ek)", c: "Özısı (c)", delta_t: "Sıcaklık Değişimi (Δt)", lambda: "Ergime Isısı (λ)", r: "Buharlaşma Isısı (r)", q: "Yanma Isısı / Yük (q)", Q_кор: "Faydalı Isı", Q_повн: "Toplam Isı", eta: "Verim (η)", I: "Akım (I)", U: "Gerilim (U)", rho_res: "Özdirenç (ρ)", R: "Direnç (R)", k_c: "k (9*10^9)", q1: "Yük 1 (q1)", q2: "Yük 2 (q2)", r_dist: "Uzaklık (r)", B: "Manyetik İndüksiyon (B)", alpha: "Açı (α)", Q: "Isı (Q)" },
+            ro: { l: "Drum (l)", t: "Timp (t)", m: "Masă (m)", V: "Volum (V)", p: "Impuls / Presiune", F: "Forță (F)", S: "Suprafață (S)", k: "Rigiditate (k)", x: "Alungire (x)", mu: "Coef. frecare (μ)", N: "Forță de apăsare normală (N)", rho: "Densitate (ρ)", V_зан: "Volum scufundat (V)", A: "Lucru (A)", N_pow: "Putere (N)", E_p: "Energie potențială (Ep)", E_k: "Energie cinetică (Ek)", c: "Căldură specifică (c)", delta_t: "Variație temperatură (Δt)", lambda: "Căldură topire (λ)", r: "Căldură vaporizare (r)", q: "Căldură ardere / Sarcină (q)", Q_кор: "Căldură utilă", Q_повн: "Căldură totală", eta: "Randament (η)", I: "Intensitate (I)", U: "Tensiune (U)", rho_res: "Rezistivitate (ρ)", R: "Rezistență (R)", k_c: "k (9*10^9)", q1: "Sarcină 1 (q1)", q2: "Sarcină 2 (q2)", r_dist: "Distanță (r)", B: "Inducție magnetică (B)", alpha: "Unghi (α)", Q: "Căldură (Q)" },
+            pt: { l: "Distância (l)", t: "Tempo (t)", m: "Massa (m)", V: "Volume (V)", p: "Momento / Pressão", F: "Força (F)", S: "Área (S)", k: "Constante elástica (k)", x: "Deformação (x)", mu: "Coef. atrito (μ)", N: "Força normal (N)", rho: "Densidade (ρ)", V_зан: "Volume submerso (V)", A: "Trabalho (A)", N_pow: "Potência (N)", E_p: "Energia potencial (Ep)", E_k: "Energia cinética (Ek)", c: "Calor específico (c)", delta_t: "Variação de temperatura (Δt)", lambda: "Calor de fusão (λ)", r: "Calor de vaporização (r)", q: "Calor de combustão / Carga (q)", Q_кор: "Calor útil", Q_повн: "Calor total", eta: "Eficiência (η)", I: "Corrente (I)", U: "Tensão (U)", rho_res: "Resistividade (ρ)", R: "Resistência (R)", k_c: "k (9*10^9)", q1: "Carga 1 (q1)", q2: "Carga 2 (q2)", r_dist: "Distância (r)", B: "Indução magnética (B)", alpha: "Ângulo (α)", Q: "Calor (Q)" }
+        };
+
+        let currentLang = 'uk';
+        let currentTab = 'all';
+
+        const defaultFormulasTemplates = [
+            { id: 1, formula: "v = l / t", given: ["l", "t"], find: "v", calc: (d) => d.l / d.t, symKeys: ["l", "t"] },
+            { id: 2, formula: "rho = m / V", given: ["m", "V"], find: "rho", calc: (d) => d.m / d.V, symKeys: ["m", "V"] },
+            { id: 3, formula: "p = m * v", given: ["m", "v"], find: "p", calc: (d) => d.m * d.v, symKeys: ["m", "v"] },
+            { id: 4, formula: "p = F / S", given: ["F", "S"], find: "p", calc: (d) => d.F / d.S, symKeys: ["F", "S"] },
+            { id: 5, formula: "F_тяж = m * g", given: ["m"], find: "F_тяж", calc: (d) => d.m * 9.8, symKeys: ["m"] },
+            { id: 6, formula: "F_пруж = k * x", given: ["k", "x"], find: "F_пруж", calc: (d) => d.k * d.x, symKeys: ["k", "x"] },
+            { id: 7, formula: "F_тер = mu * N", given: ["mu", "N"], find: "F_тер", calc: (d) => d.mu * d.N, symKeys: ["mu", "N"] },
+            { id: 8, formula: "P = m * g", given: ["m"], find: "P", calc: (d) => d.m * 9.8, symKeys: ["m"] },
+            { id: 9, formula: "F_арх = rho * g * V_зан", given: ["rho", "V_зан"], find: "F_арх", calc: (d) => d.rho * 9.8 * d.V_зан, symKeys: ["rho", "V_зан"] },
+            { id: 10, formula: "A = F * l", given: ["F", "l"], find: "A", calc: (d) => d.F * d.l, symKeys: ["F", "l"] },
+            { id: 11, formula: "N = A / t", given: ["A", "t"], find: "N", calc: (d) => d.A / d.t, symKeys: ["A", "t"] },
+            { id: 12, formula: "E_p = m * g * h", given: ["m", "h"], find: "E_p", calc: (d) => d.m * 9.8 * d.h, symKeys: ["m", "h"] },
+            { id: 13, formula: "E_k = (m * v^2) / 2", given: ["m", "v"], find: "E_k", calc: (d) => (d.m * Math.pow(d.v, 2)) / 2, symKeys: ["m", "v"] },
+            { id: 14, formula: "Q = c * m * delta_t", given: ["c", "m", "delta_t"], find: "Q", calc: (d) => d.c * d.m * d.delta_t, symKeys: ["c", "m", "delta_t"] },
+            { id: 15, formula: "Q = lambda * m", given: ["lambda", "m"], find: "Q", calc: (d) => d.lambda * d.m, symKeys: ["lambda", "m"] },
+            { id: 16, formula: "Q = r * m", given: ["r", "m"], find: "Q", calc: (d) => d.r * d.m, symKeys: ["r", "m"] },
+            { id: 17, formula: "Q = q * m", given: ["q", "m"], find: "Q", calc: (d) => d.q * d.m, symKeys: ["q", "m"] },
+            { id: 18, formula: "eta = (Q_кор / Q_повн) * 100", given: ["Q_кор", "Q_повн"], find: "eta", calc: (d) => (d.Q_кор / d.Q_повн) * 100, symKeys: ["Q_кор", "Q_повн"] },
+            { id: 19, formula: "I = q / t", given: ["q", "t"], find: "I", calc: (d) => d.q / d.t, symKeys: ["q", "t"] },
+            { id: 20, formula: "U = A / q", given: ["A", "q"], find: "U", calc: (d) => d.A / d.q, symKeys: ["A", "q"] },
+            { id: 21, formula: "R = rho_res * (l / S)", given: ["rho_res", "l", "S"], find: "R", calc: (d) => d.rho_res * (d.l / d.S), symKeys: ["rho_res", "l", "S"] },
+            { id: 22, formula: "I = U / R", given: ["U", "R"], find: "I", calc: (d) => d.U / d.R, symKeys: ["U", "R"] },
+            { id: 23, formula: "F = k_c * (|q1| * |q2|) / r^2", given: ["k_c", "q1", "q2", "r"], find: "F", calc: (d) => 9e9 * (Math.abs(d.q1) * Math.abs(d.q2)) / Math.pow(d.r, 2), symKeys: ["k_c", "q1", "q2", "r"] },
+            { id: 24, formula: "A = U * I * t", given: ["U", "I", "t"], find: "A", calc: (d) => d.U * d.I * d.t, symKeys: ["U", "I", "t"] },
+            { id: 25, formula: "P = U * I", given: ["U", "I"], find: "P", calc: (d) => d.U * d.I, symKeys: ["U", "I"] },
+            { id: 26, formula: "Q = I^2 * R * t", given: ["I", "R", "t"], find: "Q", calc: (d) => Math.pow(d.I, 2) * d.R * d.t, symKeys: ["I", "R", "t"] },
+            { id: 27, formula: "F_амп = B * I * l * sin(alpha)", given: ["B", "I", "l", "alpha"], find: "F_амп", calc: (d) => d.B * d.I * d.l * Math.sin(d.alpha * Math.PI / 180), symKeys: ["B", "I", "l", "alpha"] }
+        ];
+
+        function getLocalizedFormulas() {
+            const names = formulaNamesByLang[currentLang] || formulaNamesByLang['en'];
+            const syms = symbolsMap[currentLang] || symbolsMap['en'];
+            return defaultFormulasTemplates.map(t => {
+                const localizedSymbols = {};
+                t.symKeys.forEach(sk => {
+                    localizedSymbols[sk] = syms[sk] || sk;
+                });
+                return {
+                    id: t.id,
+                    type: 'default',
+                    name: names[t.id] || "Formula",
+                    formula: t.formula,
+                    given: t.given,
+                    find: t.find,
+                    calc: t.calc,
+                    symbols: localizedSymbols
+                };
+            });
+        }
+
+        let customFormulas = JSON.parse(localStorage.getItem('custom_physics_formulas_data') || '[]');
+        customFormulas = customFormulas.map(f => ({ ...f, calc: new Function('d', 'return ' + f.calcStr) }));
+        let activeFormula = null;
+
+        function changeLanguage(lang) {
+            currentLang = lang;
+            const t = i18n[lang];
+            document.getElementById('appTitle').innerText = t.title;
+            document.getElementById('appSubtitle').innerText = t.subtitle;
+            document.getElementById('searchHeader').innerText = t.searchHeader;
+            document.getElementById('labelGiven').innerText = t.labelGiven;
+            document.getElementById('labelFind').innerText = t.labelFind;
+            document.getElementById('tabAll').innerText = t.all;
+            document.getElementById('tabCustom').innerText = t.custom;
+            document.getElementById('addBtnText').innerText = t.addBtn;
+            document.getElementById('calcBtnLabel').innerText = t.calcLabel;
+            document.getElementById('standCalcTitle').innerText = t.standCalcTitle;
+            document.getElementById('addModalTitle').innerText = t.addModalTitle;
+            document.getElementById('labelName').innerText = t.labelName;
+            document.getElementById('labelFormula').innerText = t.labelFormula;
+            document.getElementById('labelNewFind').innerText = t.labelNewFind;
+            document.getElementById('labelNewGiven').innerText = t.labelNewGiven;
+            document.getElementById('labelJsCalc').innerText = t.labelJsCalc;
+            document.getElementById('saveBtnText').innerText = t.saveBtnText;
+            document.getElementById('footerText').innerHTML = t.footerText;
+            renderFormulas();
+        }
+
+        function setTab(tab) {
+            currentTab = tab;
+            if (tab === 'all') {
+                document.getElementById('tabAll').className = "px-3.5 py-1.5 rounded-xl bg-cyan-600 text-white text-xs font-semibold whitespace-nowrap cursor-pointer transition";
+                document.getElementById('tabCustom').className = "px-3.5 py-1.5 rounded-xl bg-slate-900 border border-slate-800 text-amber-400 text-xs font-semibold whitespace-nowrap cursor-pointer hover:border-slate-700 transition";
+            } else {
+                document.getElementById('tabCustom').className = "px-3.5 py-1.5 rounded-xl bg-cyan-600 text-white text-xs font-semibold whitespace-nowrap cursor-pointer transition";
+                document.getElementById('tabAll').className = "px-3.5 py-1.5 rounded-xl bg-slate-900 border border-slate-800 text-slate-400 text-xs font-semibold whitespace-nowrap cursor-pointer hover:border-slate-700 transition";
+            }
+            renderFormulas();
+        }
+
+        function renderFormulas() {
+            const container = document.getElementById('formulasList');
+            container.innerHTML = '';
+            
+            const givenQuery = document.getElementById('inputGiven').value.toLowerCase().trim();
+            const findQuery = document.getElementById('inputFind').value.toLowerCase().trim();
+
+            let activeList = currentTab === 'all' ? getLocalizedFormulas() : customFormulas;
+            const loc = i18n[currentLang];
+
+            const filtered = activeList.filter(f => {
+                const nameMatch = f.name.toLowerCase().includes(givenQuery) || f.formula.toLowerCase().includes(givenQuery);
+                const matchFind = !findQuery || f.find.toLowerCase().includes(findQuery);
+                const matchGiven = !givenQuery || f.given.some(g => g.toLowerCase().includes(givenQuery)) || nameMatch;
+                return matchFind && matchGiven;
+            });
+
+            if (filtered.length === 0) {
+                container.innerHTML = `<div class="text-center py-10 text-slate-500 text-xs">${loc.notFound}</div>`;
+                return;
+            }
+
+            filtered.forEach(f => {
+                const card = document.createElement('div');
+                card.className = "bg-slate-900/60 border border-slate-800/80 hover:border-cyan-500/50 rounded-2xl p-3 transition flex items-center justify-between cursor-pointer group shadow-sm hover:shadow-cyan-500/10";
+                card.onclick = () => openCalc(f);
+                
+                let badgeText = f.type === 'custom' ? loc.badgeCustom : loc.badgePhysics;
+                let badgeColor = f.type === 'custom' ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' : 'bg-cyan-500/10 text-cyan-400 border-cyan-500/20';
+
+                card.innerHTML = `
+                    <div class="pr-2">
+                        <div class="flex items-center space-x-1.5 mb-1">
+                            <span class="text-[9px] ${badgeColor} border px-2 py-0.5 rounded-full font-semibold">${badgeText}</span>
+                            <span class="text-[11px] text-slate-400">${loc.findLabelText} <strong class="text-white">${f.find}</strong></span>
+                        </div>
+                        <h3 class="font-bold text-xs sm:text-sm text-slate-200 group-hover:text-cyan-400 transition">${f.name}</h3>
+                        <p class="text-[11px] text-slate-400 mt-0.5">${loc.givenLabelText} ${f.given.join(', ')}</p>
+                    </div>
+                    <div class="bg-slate-950 border border-slate-800 px-2.5 py-2 rounded-xl text-cyan-400 font-mono font-bold text-xs shrink-0">
+                        ${f.formula}
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        function openCalc(formula) {
+            activeFormula = formula;
+            document.getElementById('calcModal').classList.remove('hidden');
+            document.getElementById('modalFormulaTitle').innerText = formula.name;
+            document.getElementById('modalFormulaEquation').innerText = formula.formula;
+            document.getElementById('modalResult').innerText = '';
+
+            const inputsDiv = document.getElementById('modalInputs');
+            inputsDiv.innerHTML = '';
+
+            Object.keys(formula.symbols).forEach(sym => {
+                inputsDiv.innerHTML += `
+                    <div>
+                        <label class="text-[11px] text-slate-400 block mb-1">${formula.symbols[sym]}:</label>
+                        <input type="number" id="val_${sym}" placeholder="..." class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-cyan-500 text-white">
+                    </div>
+                `;
+            });
+            document.getElementById('calcBtnText').innerText = i18n[currentLang].calcBtn;
+        }
+
+        function closeCalc() { document.getElementById('calcModal').classList.add('hidden'); }
+
+        function calculateResult() {
+            if (!activeFormula) return;
+            const data = {};
+            let isValid = true;
+            const loc = i18n[currentLang];
+
+            Object.keys(activeFormula.symbols).forEach(sym => {
+                const el = document.getElementById(`val_${sym}`);
+                const val = el ? parseFloat(el.value) : NaN;
+                if (isNaN(val)) isValid = false;
+                data[sym] = val;
+            });
+
+            if (!isValid) {
+                document.getElementById('modalResult').innerText = loc.fillAll;
+                return;
+            }
+
+            try {
+                const res = activeFormula.calc(data);
+                document.getElementById('modalResult').innerText = `${loc.result} ${res.toFixed(4)}`;
+            } catch (e) {
+                document.getElementById('modalResult').innerText = loc.calcError;
+            }
+        }
+
+        function openStandaloneCalc() { document.getElementById('standaloneCalcModal').classList.remove('hidden'); }
+        function closeStandaloneCalc() { document.getElementById('standaloneCalcModal').classList.add('hidden'); }
+
+        function calcAppend(char) {
+            const screen = document.getElementById('calcScreen');
+            screen.value += char;
+        }
+        function calcClear() {
+            document.getElementById('calcScreen').value = '';
+        }
+        function calcEvaluate() {
+            const screen = document.getElementById('calcScreen');
+            try {
+                screen.value = eval(screen.value);
+            } catch (e) {
+                screen.value = "Error";
+            }
+        }
+
+        function openAddModal() { document.getElementById('addModal').classList.remove('hidden'); }
+        function closeAddModal() { document.getElementById('addModal').classList.add('hidden'); }
+
+        function saveCustomFormula() {
+            const title = document.getElementById('newTitle').value.trim();
+            const formulaStr = document.getElementById('newFormula').value.trim();
+            const findStr = document.getElementById('newFind').value.trim();
+            const givenStr = document.getElementById('newGiven').value.trim();
+            const calcStr = document.getElementById('newCalc').value.trim();
+            const loc = i18n[currentLang];
+
+            if (!title || !formulaStr || !findStr || !calcStr) {
+                alert(loc.fillAll);
+                return;
+            }
+
+            const givenArr = givenStr ? givenStr.split(',').map(s => s.trim()) : [];
+            const symbolsObj = {};
+            givenArr.forEach(g => symbolsObj[g] = g);
+            symbolsObj[findStr] = findStr;
+
+            const newF = {
+                id: Date.now(),
+                type: 'custom',
+                name: title,
+                formula: formulaStr,
+                given: givenArr,
+                find: findStr,
+                calcStr: calcStr,
+                calc: new Function('d', 'return ' + calcStr),
+                symbols: symbolsObj
+            };
+
+            customFormulas.push(newF);
+            localStorage.setItem('custom_physics_formulas_data', JSON.stringify(customFormulas.map(f => ({
+                id: f.id, type: f.type, name: f.name, formula: f.formula, given: f.given, find: f.find, calcStr: f.calcStr, symbols: f.symbols
+            }))));
+
+            closeAddModal();
+            setTab('custom');
+        }
+
+        renderFormulas();
+    </script>
+</body>
+</html>
